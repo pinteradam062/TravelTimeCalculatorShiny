@@ -8,26 +8,26 @@ MILE_TO_METER = 1609.344
 # Train database
 # =========================
 TRAIN_TYPES = {
-    "Diesel Regional": {
+    "Diesel MBTA": {
         "mass": 467000,
-        "a0": 0.37,
-        "b": 0.70,
+        "a0": 0.51,
+        "b": 0.30,
         "power": 2300000,
-        "vmax": 100,
+        "vmax": 127.138,
     },
-    "EMU Regional": {
-        "mass": 342000,
-        "a0": 1.10,
+    "EMU Stadler KISS": {
+        "mass": 566400,
+        "a0": 0.94,
         "b": 0.80,
-        "power": 6400000,
-        "vmax": 110,
+        "power": 6000000,
+        "vmax": 127.138,
     },
-    "High-Speed EMU": {
-        "mass": 400000,
-        "a0": 0.6,
-        "b": 0.9,
-        "power": 8000000,
-        "vmax": 186,
+    "Siemens Charger B+AC [Battery Mode]": {
+        "mass": 495700,
+        "a0": 0.63,
+        "b": 0.6,
+        "power": 3300000,
+        "vmax": 127.138,
     },
 }
 
