@@ -11,7 +11,7 @@ from model import run_route_model, TRAIN_TYPES
 # GitHub routes
 # =========================
 GITHUB_ROUTES = {
-    "Providence Line": "https://github.com/pinteradam062/TravelTimeCalculatorShiny/blob/main/routes/providence.csv",
+    "Providence Line": "https://github.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/providence.csv",
 
 }
 
