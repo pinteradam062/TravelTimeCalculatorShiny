@@ -4,7 +4,36 @@ import pandas as pd
 MPH_TO_MPS = 0.44704
 MILE_TO_METER = 1609.344
 
+# =========================
+# Train database (hardcoded)
+# =========================
+TRAIN_TYPES = {
+    "Diesel Regional": {
+        "mass": 467000,
+        "a0": 0.37,
+        "b": 0.70,
+        "power": 2300000,
+        "vmax": 100,  # mph
+    },
+    "EMU Regional": {
+        "mass": 342000,
+        "a0": 1.10,
+        "b": 0.80,
+        "power": 6400000,
+        "vmax": 110,
+    },
+    "High-Speed EMU": {
+        "mass": 400000,
+        "a0": 0.6,
+        "b": 0.9,
+        "power": 8000000,
+        "vmax": 186,
+    },
+}
 
+# =========================
+# Physics functions
+# =========================
 def accel_distance_time(v_target, mass, force, power):
     if v_target <= 0:
         return 0.0, 0.0
@@ -41,32 +70,15 @@ def distance_needed_for_peak(v_peak, mass, force, power, b):
     return d_acc + d_brk
 
 
-def solve_v_peak(vmax, distance_m, mass, force, power, b,
-                 max_iter=200, tol=1e-3, relax=0.2, scale=200.0):
-    # initial guess from constant-acceleration approximation
-    a0 = force / mass
-    v_guess = math.sqrt(max(0.0, 2 * distance_m / ((1 / a0) + (1 / b))))
-    v_guess = max(0.0, min(v_guess, vmax))
-
-    for _ in range(max_iter):
-        needed = distance_needed_for_peak(v_guess, mass, force, power, b)
-        error = distance_m - needed
-
-        if abs(error) < tol:
-            return v_guess
-
-        v_guess = v_guess + relax * (error / scale)
-        v_guess = max(0.0, min(v_guess, vmax))
-
-    # fallback: bisection
+def solve_v_peak(vmax, distance_m, mass, force, power, b):
     v_low = 0.0
     v_high = vmax
 
-    for _ in range(max_iter):
+    for _ in range(100):
         v_mid = 0.5 * (v_low + v_high)
         needed = distance_needed_for_peak(v_mid, mass, force, power, b)
 
-        if abs(distance_m - needed) < tol:
+        if abs(distance_m - needed) < 1e-3:
             return v_mid
 
         if needed > distance_m:
@@ -94,51 +106,53 @@ def travel_time(vmax, distance_m, mass, a0, b, power):
     return t_acc_peak + t_brk_peak
 
 
-def run_route_model(df, diesel_params, emu_params, include_dwell=True):
-    cumulative_distance_m = 0.0
-    cumulative_time_diesel = 0.0
-    cumulative_time_emu = 0.0
-
+# =========================
+# Main model
+# =========================
+def run_route_model(df, selected_trains, include_dwell=True):
     results = []
 
-    for _, section in df.iterrows():
+    cumulative_distance_m = 0.0
+    cumulative_times = {train: 0.0 for train in selected_trains}
+
+    for i, section in df.iterrows():
         adj_distance_m = float(section["distance_mi"]) * MILE_TO_METER
         cumulative_distance_m += adj_distance_m
 
-        vmax = float(section["speed_mph"]) * MPH_TO_MPS
+        vmax_track = float(section["speed_mph"]) * MPH_TO_MPS
         dwell = float(section["dwell"]) if include_dwell else 0.0
 
-        run_time_diesel = travel_time(
-            vmax,
-            adj_distance_m,
-            diesel_params["mass"],
-            diesel_params["a0"],
-            diesel_params["b"],
-            diesel_params["power"],
-        )
-
-        run_time_emu = travel_time(
-            vmax,
-            adj_distance_m,
-            emu_params["mass"],
-            emu_params["a0"],
-            emu_params["b"],
-            emu_params["power"],
-        )
-
-        cumulative_time_diesel += run_time_diesel + dwell
-        cumulative_time_emu += run_time_emu + dwell
-
-        results.append({
+        row = {
             "Stop": section["stop"],
             "Total distance [mi]": cumulative_distance_m / MILE_TO_METER,
-            "Adjacent distance [mi]": float(section["distance_mi"]),
-            "Top speed [mph]": float(section["speed_mph"]),
-            "Travel time Diesel [s]": run_time_diesel,
-            "Travel time EMU [s]": run_time_emu,
-            "Dwell [s]": dwell,
-            "Cumulative Diesel [s]": cumulative_time_diesel,
-            "Cumulative EMU [s]": cumulative_time_emu
-        })
+        }
+
+        for train in selected_trains:
+            params = TRAIN_TYPES[train]
+
+            train_vmax = params["vmax"] * MPH_TO_MPS
+            vmax = min(train_vmax, vmax_track)
+
+            run_time = travel_time(
+                vmax,
+                adj_distance_m,
+                params["mass"],
+                params["a0"],
+                params["b"],
+                params["power"],
+            )
+
+            # no dwell at first station
+            if i == 0:
+                dwell_effective = 0.0
+            else:
+                dwell_effective = dwell
+
+            cumulative_times[train] += run_time + dwell_effective
+
+            row[f"Travel time {train} [s]"] = run_time
+            row[f"Cumulative {train} [s]"] = cumulative_times[train]
+
+        results.append(row)
 
     return pd.DataFrame(results)
