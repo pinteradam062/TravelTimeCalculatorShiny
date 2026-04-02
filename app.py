@@ -77,7 +77,8 @@ def server(input, output, session):
 
         # GitHub
         if source == "github":
-            url = input.github_route()
+            selected_name = input.github_route()
+            url = GITHUB_ROUTES[selected_name]
             return pd.read_csv(url, sep=";")
 
         # fallback
