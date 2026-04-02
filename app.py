@@ -35,7 +35,7 @@ app_ui = ui.page_sidebar(
         ui.input_select(
             "github_route",
             "GitHub routes",
-            choices=GITHUB_ROUTES,
+            choices={name: name for name in GITHUB_ROUTES.keys()},
         ),
 
         ui.input_checkbox("include_dwell", "Include dwell times", value=True),
