@@ -11,9 +11,8 @@ from model import run_route_model, TRAIN_TYPES
 # GitHub routes
 # =========================
 GITHUB_ROUTES = {
-    "Providence Line": "https://raw.githubusercontent.com/yourusername/rail-model/main/routes/providence.csv",
-    "Regional Line": "https://raw.githubusercontent.com/yourusername/rail-model/main/routes/regional.csv",
-    "High-Speed": "https://raw.githubusercontent.com/yourusername/rail-model/main/routes/highspeed.csv",
+    "Providence Line": "https://github.com/pinteradam062/TravelTimeCalculatorShiny/blob/main/routes/providence.csv",
+
 }
 
 
