@@ -7,14 +7,43 @@ from shiny import App, reactive, render, ui
 from model import run_route_model, TRAIN_TYPES
 
 
+# =========================
+# GitHub routes
+# =========================
+GITHUB_ROUTES = {
+    "Providence Line": "https://raw.githubusercontent.com/yourusername/rail-model/main/routes/providence.csv",
+    "Regional Line": "https://raw.githubusercontent.com/yourusername/rail-model/main/routes/regional.csv",
+    "High-Speed": "https://raw.githubusercontent.com/yourusername/rail-model/main/routes/highspeed.csv",
+}
+
+
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.h4("Route input"),
+
+        ui.input_radio_buttons(
+            "route_source",
+            "Select route source",
+            choices={
+                "upload": "Upload file",
+                "github": "Select from GitHub",
+            },
+            selected="upload",
+        ),
+
         ui.input_file("route_file", "Upload route CSV", accept=[".csv"]),
+
+        ui.input_select(
+            "github_route",
+            "GitHub routes",
+            choices=GITHUB_ROUTES,
+        ),
+
         ui.input_checkbox("include_dwell", "Include dwell times", value=True),
 
         ui.hr(),
         ui.h4("Train selection"),
+
         ui.input_selectize(
             "trains",
             "Select trains",
@@ -38,21 +67,27 @@ def server(input, output, session):
     @reactive.calc
     @reactive.event(input.run_btn)
     def route_df():
-        fileinfo = input.route_file()
+        source = input.route_source()
 
-        if fileinfo:
-            path = fileinfo[0]["datapath"]
-        else:
-            path = Path("input_route.csv")
+        # Upload
+        if source == "upload":
+            fileinfo = input.route_file()
+            if fileinfo:
+                return pd.read_csv(fileinfo[0]["datapath"], sep=";")
 
-        return pd.read_csv(path, sep=";")
+        # GitHub
+        if source == "github":
+            url = input.github_route()
+            return pd.read_csv(url, sep=";")
+
+        # fallback
+        return pd.read_csv(Path("input_route.csv"), sep=";")
 
 
     @reactive.calc
     @reactive.event(input.run_btn)
     def result_df():
         selected_trains = input.trains()
-
         if not selected_trains:
             return pd.DataFrame()
 
@@ -65,13 +100,9 @@ def server(input, output, session):
 
     @render.data_frame
     def results_table():
-        df = result_df()
-        return render.DataGrid(df, filters=True)
+        return render.DataGrid(result_df(), filters=True)
 
 
-    # =========================
-    # Segment travel time plot
-    # =========================
     @render.plot
     def segment_plot():
         df = result_df()
@@ -81,12 +112,7 @@ def server(input, output, session):
         fig, ax = plt.subplots(figsize=(10, 5))
 
         for train in input.trains():
-            ax.plot(
-                df["Stop"],
-                df[f"Travel time {train} [s]"],
-                marker="o",
-                label=train,
-            )
+            ax.plot(df["Stop"], df[f"Travel time {train} [s]"], marker="o", label=train)
 
         ax.set_ylabel("Segment travel time [s]")
         ax.set_xlabel("Stop")
@@ -98,9 +124,6 @@ def server(input, output, session):
         return fig
 
 
-    # =========================
-    # Cumulative time plot
-    # =========================
     @render.plot
     def cumulative_plot():
         df = result_df()
@@ -110,12 +133,7 @@ def server(input, output, session):
         fig, ax = plt.subplots(figsize=(10, 5))
 
         for train in input.trains():
-            ax.plot(
-                df["Stop"],
-                df[f"Cumulative {train} [s]"],
-                marker="o",
-                label=train,
-            )
+            ax.plot(df["Stop"], df[f"Cumulative {train} [s]"], marker="o", label=train)
 
         ax.set_ylabel("Cumulative time [s]")
         ax.set_xlabel("Stop")
@@ -127,9 +145,6 @@ def server(input, output, session):
         return fig
 
 
-    # =========================
-    # Distance–Time diagram
-    # =========================
     @render.plot
     def distance_time_plot():
         df = result_df()

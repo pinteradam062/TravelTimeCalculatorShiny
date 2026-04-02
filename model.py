@@ -5,7 +5,7 @@ MPH_TO_MPS = 0.44704
 MILE_TO_METER = 1609.344
 
 # =========================
-# Train database (hardcoded)
+# Train database
 # =========================
 TRAIN_TYPES = {
     "Diesel Regional": {
@@ -13,7 +13,7 @@ TRAIN_TYPES = {
         "a0": 0.37,
         "b": 0.70,
         "power": 2300000,
-        "vmax": 100,  # mph
+        "vmax": 100,
     },
     "EMU Regional": {
         "mass": 342000,
@@ -32,7 +32,7 @@ TRAIN_TYPES = {
 }
 
 # =========================
-# Physics functions
+# Physics
 # =========================
 def accel_distance_time(v_target, mass, force, power):
     if v_target <= 0:
@@ -107,7 +107,7 @@ def travel_time(vmax, distance_m, mass, a0, b, power):
 
 
 # =========================
-# Main model
+# Main
 # =========================
 def run_route_model(df, selected_trains, include_dwell=True):
     results = []
@@ -142,12 +142,7 @@ def run_route_model(df, selected_trains, include_dwell=True):
                 params["power"],
             )
 
-            # no dwell at first station
-            if i == 0:
-                dwell_effective = 0.0
-            else:
-                dwell_effective = dwell
-
+            dwell_effective = 0.0 if i == 0 else dwell
             cumulative_times[train] += run_time + dwell_effective
 
             row[f"Travel time {train} [s]"] = run_time
