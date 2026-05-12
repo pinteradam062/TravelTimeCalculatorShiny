@@ -230,7 +230,7 @@ def server(input, output, session):
 
                 if selected_dwell is not None:
 
-                    df.loc[idx, "Dwell"] = int(selected_dwell)
+                    df.loc[idx, "dwell"] = int(selected_dwell)
 
         return df
 
