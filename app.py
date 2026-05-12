@@ -91,10 +91,10 @@ app_ui = ui.page_sidebar(
 
         ui.hr(),
 
-        #ui.input_action_button(
-        #    "run_btn",
-        #    "Run calculation",
-        #),
+        ui.input_action_button(
+            "run_btn",
+            "Run calculation",
+        ),
     ),
 
     ui.h2("Rail Travel Time Comparison"),
