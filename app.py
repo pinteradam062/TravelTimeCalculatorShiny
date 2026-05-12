@@ -47,7 +47,7 @@ app_ui = ui.page_sidebar(
                 "upload": "Upload file",
                 "github": "Select from list",
             },
-            selected="upload",
+            selected="github",
         ),
 
         ui.input_file(
@@ -241,6 +241,9 @@ def server(input, output, session):
     @reactive.calc
     @reactive.event(input.run_btn)
     def result_df():
+
+        # explicit trigger
+        input.run_btn()
 
         selected_trains = input.trains()
 
