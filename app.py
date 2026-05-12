@@ -132,10 +132,14 @@ def server(input, output, session):
 
             if fileinfo:
 
-                return pd.read_csv(
+                df = pd.read_csv(
                     fileinfo[0]["datapath"],
                     sep=";",
                 )
+
+                df.columns = df.columns.str.strip()
+
+                return df
 
         # GitHub
         if source == "github":
@@ -144,16 +148,24 @@ def server(input, output, session):
 
             url = ROUTES[selected_name]["url"]
 
-            return pd.read_csv(
+            df = pd.read_csv(
                 url,
                 sep=";",
             )
 
+            df.columns = df.columns.str.strip()
+
+            return df
+
         # fallback
-        return pd.read_csv(
+        df = pd.read_csv(
             Path("input_route.csv"),
             sep=";",
         )
+
+        df.columns = df.columns.str.strip()
+
+        return df
 
 
     # =========================
