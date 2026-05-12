@@ -39,8 +39,9 @@ app_ui = ui.page_sidebar(
             "route_source",
             "Select route source",
             choices={
+                "github": "Select from list",
                 "upload": "Upload file",
-                "github": "Select from GitHub",
+                
             },
             selected="upload",
         ),
@@ -49,7 +50,7 @@ app_ui = ui.page_sidebar(
 
         ui.input_select(
             "github_route",
-            "GitHub routes",
+            "Predefined routes",
             choices={name: name for name in ROUTES.keys()},
         ),
 
@@ -74,11 +75,49 @@ app_ui = ui.page_sidebar(
     ui.output_plot("cumulative_plot"),
     ui.output_plot("distance_time_plot"),
     ui.output_plot("terminal_bar_plot"),
+    ui.hr(),
+    ui.h4("Dwell time overrides"),
+    ui.output_ui("dwell_editor"),
 )
 
 
 def server(input, output, session):
 
+    @render.ui
+    def dwell_editor():
+
+        df = route_df()
+
+        if df.empty:
+            return ui.div()
+
+        controls = []
+
+        for idx, row in df.iterrows():
+
+            stop_name = row["Stop"]
+            default_dwell = int(row["Dwell"])
+
+            controls.append(
+
+                ui.input_radio_buttons(
+                    id=f"dwell_{idx}",
+                    label=stop_name,
+
+                    choices={
+                        "30": "30 sec",
+                        "90": "90 sec",
+                        "120": "120 sec",
+                    },
+
+                    selected=str(default_dwell),
+
+                    inline=True,
+                )
+            )
+
+        return ui.div(*controls)
+    
     @reactive.calc
     @reactive.event(input.run_btn)
     def route_df():
@@ -101,6 +140,21 @@ def server(input, output, session):
 
 
     @reactive.calc
+    def modified_route_df():
+
+        df = route_df().copy()
+
+        if df.empty:
+            return df
+
+        for idx in df.index:
+
+            selected_dwell = input[f"dwell_{idx}"]()
+
+            if selected_dwell is not None:
+                df.loc[idx, "Dwell"] = int(selected_dwell)
+
+        return df
     @reactive.event(input.run_btn)
     def result_df():
         selected_trains = input.trains()
@@ -108,11 +162,13 @@ def server(input, output, session):
             return pd.DataFrame()
 
         return run_route_model(
-            df=route_df(),
+            df=modified_route_df(),
             selected_trains=selected_trains,
             include_dwell=bool(input.include_dwell()),
         )
 
+
+    
 
     @render.data_frame
     def results_table():
@@ -124,7 +180,7 @@ def server(input, output, session):
         numeric_cols = df.select_dtypes(include="number").columns
         df[numeric_cols] = df[numeric_cols].round(1)
 
-        return render.DataGrid(df, filters=True)
+        return render.DataGrid(df)
 
 
     @render.plot
