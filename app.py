@@ -239,7 +239,7 @@ def server(input, output, session):
     # Run model
     # =========================
     @reactive.calc
-    @reactive.event(input.run_btn)
+    # @reactive.event(input.run_btn)
     def result_df():
 
         # explicit trigger
