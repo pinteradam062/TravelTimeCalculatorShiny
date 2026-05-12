@@ -20,15 +20,14 @@ ROUTES = {
         ],
     },
 
-    # Future example
-    # "Worcester Line": {
-    #     "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/worcester.csv",
-    #
-    #     "selected_stops": [
-    #         "Framingham",
-    #         "Worcester",
-    #     ],
-    # },
+    "Worcester Line": {
+         "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/worcester.csv",
+    
+         "selected_stops": [
+             "Framingham",
+             "Worcester",
+         ],
+     },
 }
 
 
@@ -46,7 +45,7 @@ app_ui = ui.page_sidebar(
             "Select route source",
             choices={
                 "upload": "Upload file",
-                "github": "Select from GitHub",
+                "github": "Select from list",
             },
             selected="upload",
         ),
@@ -59,7 +58,7 @@ app_ui = ui.page_sidebar(
 
         ui.input_select(
             "github_route",
-            "GitHub routes",
+            "Predefined routes",
             choices={name: name for name in ROUTES.keys()},
         ),
 
@@ -211,11 +210,16 @@ def server(input, output, session):
 
         for idx in df.index:
 
-            selected_dwell = input[f"dwell_{idx}"]()
+            input_id = f"dwell_{idx}"
 
-            if selected_dwell is not None:
+            # input only exists after UI render
+            if input_id in input:
 
-                df.loc[idx, "Dwell"] = int(selected_dwell)
+                selected_dwell = input[input_id]()
+
+                if selected_dwell is not None:
+
+                    df.loc[idx, "Dwell"] = int(selected_dwell)
 
         return df
 
