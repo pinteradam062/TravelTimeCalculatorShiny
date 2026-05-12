@@ -120,7 +120,6 @@ def server(input, output, session):
     # Load route
     # =========================
     @reactive.calc
-    @reactive.event(input.run_btn)
     def route_df():
 
         source = input.route_source()
