@@ -15,8 +15,8 @@ ROUTES = {
         "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/providence.csv",
 
         "selected_stops": [
-            "Back Bay",
             "Providence",
+            "Wickford Junction",
         ],
     },
 
@@ -171,9 +171,9 @@ def server(input, output, session):
 
         for idx, row in df.iterrows():
 
-            stop_name = row["Stop"]
+            stop_name = row["stop"]
 
-            default_dwell = int(row["Dwell"])
+            default_dwell = int(row["dwell"])
 
             controls.append(
 
