@@ -149,7 +149,8 @@ def run_route_model(df, selected_trains, include_dwell=True):
                 params["power"],
             )
 
-            dwell_effective = 0.0 if i == 0 else dwell
+            # dwell_effective = 0.0 if i == 0 else dwell
+            dwell_effective = dwell
             cumulative_times[train] += run_time + dwell_effective
 
             row[f"Travel time {train} [s]"] = run_time
