@@ -10,9 +10,24 @@ from model import run_route_model, TRAIN_TYPES
 # =========================
 # GitHub routes
 # =========================
-GITHUB_ROUTES = {
-    "Providence Line": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/providence.csv",
+ROUTES = {
+    "Providence Line": {
+        "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/providence.csv",
 
+        "selected_stops": [
+            "Providence",
+            "Wickford Junction",
+        ],
+    },
+
+    "Worcester Line": {
+        "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/worcester.csv",
+
+        "selected_stops": [
+            "Framingham",
+            "Worcester",
+        ],
+    },
 }
 
 
@@ -35,7 +50,7 @@ app_ui = ui.page_sidebar(
         ui.input_select(
             "github_route",
             "GitHub routes",
-            choices={name: name for name in GITHUB_ROUTES.keys()},
+            choices={name: name for name in ROUTES.keys()},
         ),
 
         ui.input_checkbox("include_dwell", "Include dwell times", value=True),
@@ -58,6 +73,7 @@ app_ui = ui.page_sidebar(
     ui.output_plot("segment_plot"),
     ui.output_plot("cumulative_plot"),
     ui.output_plot("distance_time_plot"),
+    ui.output_plot("terminal_bar_plot"),
 )
 
 
@@ -77,7 +93,7 @@ def server(input, output, session):
         # GitHub
         if source == "github":
             selected_name = input.github_route()
-            url = GITHUB_ROUTES[selected_name]
+            url = ROUTES[selected_name]["url"]
             return pd.read_csv(url, sep=";")
 
         # fallback
@@ -100,7 +116,15 @@ def server(input, output, session):
 
     @render.data_frame
     def results_table():
-        return render.DataGrid(result_df(), filters=True)
+        df = result_df()
+
+        if df.empty:
+            return render.DataGrid(df)
+
+        numeric_cols = df.select_dtypes(include="number").columns
+        df[numeric_cols] = df[numeric_cols].round(1)
+
+        return render.DataGrid(df, filters=True)
 
 
     @render.plot
@@ -167,6 +191,69 @@ def server(input, output, session):
         ax.legend()
 
         fig.tight_layout()
+        return fig
+    
+    @render.plot
+    def terminal_bar_plot():
+
+        df = result_df()
+
+        if df.empty:
+            return
+
+        # =========================
+        # Route-specific stops
+        # =========================
+        selected_route = input.github_route()
+
+        SELECTED_STOPS = ROUTES[selected_route]["selected_stops"]
+
+        filtered_df = df[df["Stop"].isin(SELECTED_STOPS)]
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+
+        x = range(len(filtered_df))
+        width = 0.8 / len(input.trains())
+
+        for i, train in enumerate(input.trains()):
+
+            values = filtered_df[f"Cumulative {train} [s]"] / 60
+
+            positions = [p + i * width for p in x]
+
+            bars = ax.bar(
+                positions,
+                values,
+                width=width,
+                label=train,
+            )
+
+            for bar in bars:
+                height = bar.get_height()
+
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    height,
+                    f"{height:.1f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=9,
+                )
+
+        ax.set_xticks(
+            [p + width * (len(input.trains()) - 1) / 2 for p in x]
+        )
+
+        ax.set_xticklabels(filtered_df["Stop"])
+
+        ax.set_ylabel("Cumulative running time [min]")
+
+        ax.set_title("Cumulative running time at selected stops")
+
+        ax.legend()
+
+        fig.tight_layout()
+
         return fig
 
 
