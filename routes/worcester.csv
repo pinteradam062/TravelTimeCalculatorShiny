@@ -1,18 +1,18 @@
 stop;distance_mi;speed_mph;dwell
-Back Bay (F/W);1.2;15;0
-Lansdowne;1.3;30;0
-Boston Landing;2.2;33;0
-Newtonville;3.4;75;0
-West Newton;1;75;0
-Auburndale;1.1;60;0
-Wellesley Farms;2.3;60;0
-Wellesley Hills;1;60;0
-Wellesley Square;1.2;60;0
-Natick Center;3;60;0
-West Natick;2.2;60;0
-Framingham;1.5;30;0
-Ashland;3.8;60;0
-Southborough;2.2;60;0
-Westborough;6.6;65;0
-Grafton;2.4;60;0
+Back Bay (F/W);1.2;15;90
+Lansdowne;1.3;30;30
+Boston Landing;2.2;33;30
+Newtonville;3.4;75;120
+West Newton;1;75;120
+Auburndale;1.1;60;120
+Wellesley Farms;2.3;60;120
+Wellesley Hills;1;60;120
+Wellesley Square;1.2;60;90
+Natick Center;3;60;30
+West Natick;2.2;60;120
+Framingham;1.5;30;90
+Ashland;3.8;60;90
+Southborough;2.2;60;90
+Westborough;6.6;65;90
+Grafton;2.4;60;90
 Worcester;7.8;45;0
