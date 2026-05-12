@@ -8,55 +8,69 @@ from model import run_route_model, TRAIN_TYPES
 
 
 # =========================
-# GitHub routes
+# Route configuration
 # =========================
 ROUTES = {
     "Providence Line": {
         "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/providence.csv",
 
         "selected_stops": [
+            "Back Bay",
             "Providence",
-            "Wickford Junction",
         ],
     },
 
-    "Worcester Line": {
-        "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/worcester.csv",
-
-        "selected_stops": [
-            "Framingham",
-            "Worcester",
-        ],
-    },
+    # Future example
+    # "Worcester Line": {
+    #     "url": "https://raw.githubusercontent.com/pinteradam062/TravelTimeCalculatorShiny/main/routes/worcester.csv",
+    #
+    #     "selected_stops": [
+    #         "Framingham",
+    #         "Worcester",
+    #     ],
+    # },
 }
 
 
+# =========================
+# UI
+# =========================
 app_ui = ui.page_sidebar(
+
     ui.sidebar(
+
         ui.h4("Route input"),
 
         ui.input_radio_buttons(
             "route_source",
             "Select route source",
             choices={
-                "github": "Select from list",
                 "upload": "Upload file",
-                
+                "github": "Select from GitHub",
             },
             selected="upload",
         ),
 
-        ui.input_file("route_file", "Upload route CSV", accept=[".csv"]),
+        ui.input_file(
+            "route_file",
+            "Upload route CSV",
+            accept=[".csv"],
+        ),
 
         ui.input_select(
             "github_route",
-            "Predefined routes",
+            "GitHub routes",
             choices={name: name for name in ROUTES.keys()},
         ),
 
-        ui.input_checkbox("include_dwell", "Include dwell times", value=True),
+        ui.input_checkbox(
+            "include_dwell",
+            "Include dwell times",
+            value=True,
+        ),
 
         ui.hr(),
+
         ui.h4("Train selection"),
 
         ui.input_selectize(
@@ -66,23 +80,86 @@ app_ui = ui.page_sidebar(
             multiple=True,
         ),
 
-        ui.input_action_button("run_btn", "Run calculation"),
+        ui.hr(),
+
+        ui.accordion(
+            ui.accordion_panel(
+                "Dwell time overrides",
+                ui.output_ui("dwell_editor"),
+            ),
+            open=False,
+        ),
+
+        ui.hr(),
+
+        ui.input_action_button(
+            "run_btn",
+            "Run calculation",
+        ),
     ),
 
     ui.h2("Rail Travel Time Comparison"),
+
     ui.output_data_frame("results_table"),
+
     ui.output_plot("segment_plot"),
+
     ui.output_plot("cumulative_plot"),
+
     ui.output_plot("distance_time_plot"),
+
     ui.output_plot("terminal_bar_plot"),
-    ui.hr(),
-    ui.h4("Dwell time overrides"),
-    ui.output_ui("dwell_editor"),
 )
 
 
+# =========================
+# Server
+# =========================
 def server(input, output, session):
 
+    # =========================
+    # Load route
+    # =========================
+    @reactive.calc
+    @reactive.event(input.run_btn)
+    def route_df():
+
+        source = input.route_source()
+
+        # Upload
+        if source == "upload":
+
+            fileinfo = input.route_file()
+
+            if fileinfo:
+
+                return pd.read_csv(
+                    fileinfo[0]["datapath"],
+                    sep=";",
+                )
+
+        # GitHub
+        if source == "github":
+
+            selected_name = input.github_route()
+
+            url = ROUTES[selected_name]["url"]
+
+            return pd.read_csv(
+                url,
+                sep=";",
+            )
+
+        # fallback
+        return pd.read_csv(
+            Path("input_route.csv"),
+            sep=";",
+        )
+
+
+    # =========================
+    # Dwell editor UI
+    # =========================
     @render.ui
     def dwell_editor():
 
@@ -96,12 +173,14 @@ def server(input, output, session):
         for idx, row in df.iterrows():
 
             stop_name = row["Stop"]
+
             default_dwell = int(row["Dwell"])
 
             controls.append(
 
                 ui.input_radio_buttons(
                     id=f"dwell_{idx}",
+
                     label=stop_name,
 
                     choices={
@@ -117,28 +196,11 @@ def server(input, output, session):
             )
 
         return ui.div(*controls)
-    
-    @reactive.calc
-    @reactive.event(input.run_btn)
-    def route_df():
-        source = input.route_source()
-
-        # Upload
-        if source == "upload":
-            fileinfo = input.route_file()
-            if fileinfo:
-                return pd.read_csv(fileinfo[0]["datapath"], sep=";")
-
-        # GitHub
-        if source == "github":
-            selected_name = input.github_route()
-            url = ROUTES[selected_name]["url"]
-            return pd.read_csv(url, sep=";")
-
-        # fallback
-        return pd.read_csv(Path("input_route.csv"), sep=";")
 
 
+    # =========================
+    # Modified route with overrides
+    # =========================
     @reactive.calc
     def modified_route_df():
 
@@ -152,88 +214,141 @@ def server(input, output, session):
             selected_dwell = input[f"dwell_{idx}"]()
 
             if selected_dwell is not None:
+
                 df.loc[idx, "Dwell"] = int(selected_dwell)
 
         return df
+
+
+    # =========================
+    # Run model
+    # =========================
+    @reactive.calc
     @reactive.event(input.run_btn)
     def result_df():
+
         selected_trains = input.trains()
+
         if not selected_trains:
             return pd.DataFrame()
 
         return run_route_model(
             df=modified_route_df(),
+
             selected_trains=selected_trains,
+
             include_dwell=bool(input.include_dwell()),
         )
 
 
-    
-
+    # =========================
+    # Results table
+    # =========================
     @render.data_frame
     def results_table():
+
         df = result_df()
 
         if df.empty:
             return render.DataGrid(df)
 
+        # round numeric columns
         numeric_cols = df.select_dtypes(include="number").columns
+
         df[numeric_cols] = df[numeric_cols].round(1)
 
         return render.DataGrid(df)
 
 
+    # =========================
+    # Segment plot
+    # =========================
     @render.plot
     def segment_plot():
+
         df = result_df()
+
         if df.empty:
             return
 
         fig, ax = plt.subplots(figsize=(10, 5))
 
         for train in input.trains():
-            ax.plot(df["Stop"], df[f"Travel time {train} [s]"], marker="o", label=train)
+
+            ax.plot(
+                df["Stop"],
+                df[f"Travel time {train} [s]"],
+                marker="o",
+                label=train,
+            )
 
         ax.set_ylabel("Segment travel time [s]")
+
         ax.set_xlabel("Stop")
+
         ax.set_title("Travel time by segment")
+
         ax.legend()
 
         plt.xticks(rotation=45, ha="right")
+
         fig.tight_layout()
+
         return fig
 
 
+    # =========================
+    # Cumulative plot
+    # =========================
     @render.plot
     def cumulative_plot():
+
         df = result_df()
+
         if df.empty:
             return
 
         fig, ax = plt.subplots(figsize=(10, 5))
 
         for train in input.trains():
-            ax.plot(df["Stop"], df[f"Cumulative {train} [s]"], marker="o", label=train)
+
+            ax.plot(
+                df["Stop"],
+                df[f"Cumulative {train} [s]"],
+                marker="o",
+                label=train,
+            )
 
         ax.set_ylabel("Cumulative time [s]")
+
         ax.set_xlabel("Stop")
+
         ax.set_title("Cumulative running time")
+
         ax.legend()
 
         plt.xticks(rotation=45, ha="right")
+
         fig.tight_layout()
+
         return fig
 
 
+    # =========================
+    # Distance-time plot
+    # =========================
     @render.plot
     def distance_time_plot():
+
         df = result_df()
+
         if df.empty:
             return
 
         fig, ax = plt.subplots(figsize=(10, 5))
 
         for train in input.trains():
+
             ax.plot(
                 df[f"Cumulative {train} [s]"],
                 df["Total distance [mi]"],
@@ -242,13 +357,21 @@ def server(input, output, session):
             )
 
         ax.set_xlabel("Time [s]")
+
         ax.set_ylabel("Distance [mi]")
+
         ax.set_title("Distance–Time Diagram")
+
         ax.legend()
 
         fig.tight_layout()
+
         return fig
-    
+
+
+    # =========================
+    # Terminal cumulative bar plot
+    # =========================
     @render.plot
     def terminal_bar_plot():
 
@@ -257,22 +380,24 @@ def server(input, output, session):
         if df.empty:
             return
 
-        # =========================
-        # Route-specific stops
-        # =========================
         selected_route = input.github_route()
 
-        SELECTED_STOPS = ROUTES[selected_route]["selected_stops"]
+        if selected_route not in ROUTES:
+            return
 
-        filtered_df = df[df["Stop"].isin(SELECTED_STOPS)]
+        selected_stops = ROUTES[selected_route]["selected_stops"]
+
+        filtered_df = df[df["Stop"].isin(selected_stops)]
 
         fig, ax = plt.subplots(figsize=(10, 5))
 
         x = range(len(filtered_df))
+
         width = 0.8 / len(input.trains())
 
         for i, train in enumerate(input.trains()):
 
+            # sec -> min
             values = filtered_df[f"Cumulative {train} [s]"] / 60
 
             positions = [p + i * width for p in x]
@@ -284,7 +409,9 @@ def server(input, output, session):
                 label=train,
             )
 
+            # labels
             for bar in bars:
+
                 height = bar.get_height()
 
                 ax.text(
@@ -297,14 +424,19 @@ def server(input, output, session):
                 )
 
         ax.set_xticks(
-            [p + width * (len(input.trains()) - 1) / 2 for p in x]
+            [
+                p + width * (len(input.trains()) - 1) / 2
+                for p in x
+            ]
         )
 
         ax.set_xticklabels(filtered_df["Stop"])
 
         ax.set_ylabel("Cumulative running time [min]")
 
-        ax.set_title("Cumulative running time at selected stops")
+        ax.set_title(
+            "Cumulative running time at selected stops"
+        )
 
         ax.legend()
 
@@ -313,4 +445,7 @@ def server(input, output, session):
         return fig
 
 
+# =========================
+# App
+# =========================
 app = App(app_ui, server)
