@@ -101,13 +101,15 @@ app_ui = ui.page_sidebar(
 
     ui.output_data_frame("results_table"),
 
+    ui.output_plot("terminal_bar_plot"),
+
     ui.output_plot("segment_plot"),
 
     ui.output_plot("cumulative_plot"),
 
     ui.output_plot("distance_time_plot"),
 
-    ui.output_plot("terminal_bar_plot"),
+    
 )
 
 
