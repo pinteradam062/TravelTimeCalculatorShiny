@@ -97,12 +97,14 @@ app_ui = ui.page_sidebar(
                             font-size: 12px;
                             color: gray;
                             margin-top: 2px;
+                            margin-bottom: 4px;
                         """,
                     ),
                 ),
 
                 ui.output_ui("dwell_editor"),
             ),
+
             open=False,
         ),
 
