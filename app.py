@@ -83,8 +83,24 @@ app_ui = ui.page_sidebar(
 
         ui.accordion(
             ui.accordion_panel(
-                "Dwell time overrides" \
-                "Low level: 120 sec, Mini-high: 90 sec, High level: 30 sec",
+
+                ui.div(
+
+                    ui.div(
+                        "Dwell time overrides",
+                    ),
+
+                    ui.div(
+                        "Low level: 120 sec, Mini-high: 90 sec, High level: 30 sec",
+
+                        style="""
+                            font-size: 12px;
+                            color: gray;
+                            margin-top: 2px;
+                        """,
+                    ),
+                ),
+
                 ui.output_ui("dwell_editor"),
             ),
             open=False,
