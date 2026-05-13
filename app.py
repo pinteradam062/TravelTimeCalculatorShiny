@@ -267,17 +267,47 @@ def server(input, output, session):
     @render.data_frame
     def results_table():
 
-        df = result_df()
+        df = result_df().copy()
 
         if df.empty:
             return render.DataGrid(df)
 
-        # round numeric columns
+        # =========================
+        # sec -> min
+        # =========================
+        for col in df.columns:
+
+            if "[s]" in col:
+
+                new_col = col.replace("[s]", "[min]")
+
+                df[new_col] = df[col] / 60
+
+        # optional: remove second columns
+        sec_cols = [c for c in df.columns if "[s]" in c]
+
+        df.drop(columns=sec_cols, inplace=True)
+
+        # round numeric
         numeric_cols = df.select_dtypes(include="number").columns
 
         df[numeric_cols] = df[numeric_cols].round(1)
 
         return render.DataGrid(df)
+    #@render.data_frame
+    #def results_table():
+#
+#        df = result_df()
+#
+#        if df.empty:
+#            return render.DataGrid(df)
+#
+#        # round numeric columns
+#        numeric_cols = df.select_dtypes(include="number").columns
+#
+#        df[numeric_cols] = df[numeric_cols].round(1)
+#
+#        return render.DataGrid(df)
 
 
     # =========================
@@ -297,12 +327,12 @@ def server(input, output, session):
 
             ax.plot(
                 df["Stop"],
-                df[f"Travel time {train} [s]"],
+                df[f"Travel time {train} [s]"]  / 60,
                 marker="o",
                 label=train,
             )
 
-        ax.set_ylabel("Segment travel time [s]")
+        ax.set_ylabel("Segment travel time [min]")
 
         ax.set_xlabel("Stop")
 
@@ -334,12 +364,12 @@ def server(input, output, session):
 
             ax.plot(
                 df["Stop"],
-                df[f"Cumulative {train} [s]"],
+                df[f"Cumulative {train} [s]"] / 60,
                 marker="o",
                 label=train,
             )
 
-        ax.set_ylabel("Cumulative time [s]")
+        ax.set_ylabel("Cumulative time [min]")
 
         ax.set_xlabel("Stop")
 
@@ -370,13 +400,13 @@ def server(input, output, session):
         for train in input.trains():
 
             ax.plot(
-                df[f"Cumulative {train} [s]"],
+                df[f"Cumulative {train} [s]"] / 60,
                 df["Total distance [mi]"],
                 marker="o",
                 label=train,
             )
 
-        ax.set_xlabel("Time [s]")
+        ax.set_xlabel("Time [min]")
 
         ax.set_ylabel("Distance [mi]")
 
